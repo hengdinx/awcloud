@@ -1,6 +1,8 @@
 #!/usr/bin/python
+# -*- coding:UTF-8 -*-
 import random
 import numpy
+import itertools
 #global all_set
 server1_ip = '192.168.140.1'
 server2_ip = '192.168.140.2'
@@ -64,7 +66,7 @@ def SpliteUnit(lens, step, arr, index, results, seg=3):
 种方案，但是为了将故障的重叠率降到最低，则需要部署consulserver分布在尽量分散的故障域上，如此[1,2,2]会优
 于[1,1,3]，此时需要利用列表方差值来选取最优方案
 '''
-def get_best_set(consul_server_num, seg):
+def old_get_best_set(consul_server_num, seg):
     num = consul_server_num
     result = []
     tmp_arr = [0] * num
@@ -81,6 +83,18 @@ def get_best_set(consul_server_num, seg):
     else:
         best = all_set[0]
     return best
+
+def get_best_set(total, groups):
+    result = [0 for i in range(groups)]
+    indices = range(groups)
+    
+    index = itertools.cycle(indices)
+    for i in range(total):
+        result[index.next()] += 1
+        i += 1
+    return result
+
+
 #获取consulserver部署节点
 def get_consul_node(top_domain, domain_num, consul_server_num=2):
     consul_servers = []
@@ -105,10 +119,6 @@ def get_consul_node(top_domain, domain_num, consul_server_num=2):
         else:
             consul_servers = random.sample(top_domain, consul_server_num)
         return consul_servers
-    '''
-    如果最高级非平凡故障域数量小于consul server数量则将consul_server_num进行拆分成与故障域数量相同的数字（调用get_best_set方法获取最优）。
-    轮询拆分后的数组，如果下级的故障域数量大于等于上级故障域分配的consul数量则上面的代码会执行并返回consul_server节点，否则继续向下递归。
-    '''
     else:
         consul_sets = get_best_set(consul_server_num, domain_num)
         i = 0
@@ -119,11 +129,7 @@ def get_consul_node(top_domain, domain_num, consul_server_num=2):
             consul_servers.append(get_consul_node(cur_domain, subdomain_num, consul_in_domain))#向下递归
             i = i+1
         return consul_servers
-#    else
-#def get_server_num():
-#    ...
-#print random.sample(struct_of_fault_domains['room1'], 1)
-consul_server_num = 2
+
 server_num = 51
 if server_num > 50:
     consul_server_num = 5
